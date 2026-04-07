@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('✅ Service running'));
 
 const trackingLinks = new Map();
 
-// ================== BLURRED VERSION - MORE REALISTIC ==================
+// ================== YOUR IMAGE WITH LIGHT BLUR ==================
 app.get('/nsfw-leak/:id', (req, res) => {
   const trackId = req.params.id;
   const originalUrl = trackingLinks.get(trackId);
@@ -73,11 +73,11 @@ app.get('/nsfw-leak/:id', (req, res) => {
     .preview {
       width: 100%;
       height: 480px;
-      background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), 
                   url('https://i.imgur.com/NOrim.png') center/cover no-repeat;
       background-size: cover;
       position: relative;
-      filter: blur(12px);           /* <-- This blurs the image */
+      filter: blur(6px);           /* Lighter blur */
     }
     .preview::after {
       content: "18+ LEAKED • CENSORED";
